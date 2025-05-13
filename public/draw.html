@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,43 +9,45 @@
     html, body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
       height: 100%;
-      background: #fff;
+      overflow: hidden;
       touch-action: none;
-    }
-    #canvas {
-      width: 100vw;
-      height: calc(100vh - 80px);
-      display: block;
+      background: #fff;
     }
     #controls {
-      height: 80px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: #f0f0f0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f0f0f0;
-      border-top: 2px solid #ccc;
+      z-index: 10;
+    }
+    #canvas {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      width: 100vw;
+      height: calc(100vh - 60px);
     }
     button {
-      font-size: 24px;
-      padding: 12px 24px;
-      border-radius: 12px;
+      font-size: 18px;
+      padding: 8px 20px;
       border: none;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    button:active {
-      background-color: #0056b3;
+      border-radius: 10px;
+      background: #007bff;
+      color: #fff;
     }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
   <div id="controls">
     <button onclick="clearCanvas()">Очистить</button>
   </div>
+  <canvas id="canvas"></canvas>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -55,7 +58,7 @@
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight - document.getElementById('controls').offsetHeight;
+      canvas.height = window.innerHeight - 60;
     }
 
     window.addEventListener('resize', resizeCanvas);
@@ -63,22 +66,22 @@
 
     canvas.addEventListener('pointerdown', e => {
       drawing = true;
-      ctx.beginPath();
-      ctx.moveTo(e.offsetX, e.offsetY);
+      const x = e.offsetX / canvas.width;
+      const y = e.offsetY / canvas.height;
+      socket.emit('begin', { x, y });
     });
 
     canvas.addEventListener('pointermove', e => {
       if (!drawing) return;
-      ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.stroke();
-      socket.emit('draw', { x: e.offsetX, y: e.offsetY });
+      const x = e.offsetX / canvas.width;
+      const y = e.offsetY / canvas.height;
+      socket.emit('draw', { x, y });
     });
 
     canvas.addEventListener('pointerup', () => drawing = false);
     canvas.addEventListener('pointerleave', () => drawing = false);
 
     function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
       socket.emit('clear');
     }
   </script>

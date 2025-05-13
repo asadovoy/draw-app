@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,14 +41,18 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    socket.on('begin', data => {
+      ctx.beginPath();
+      ctx.moveTo(data.x * canvas.width, data.y * canvas.height);
+    });
+
     socket.on('draw', data => {
-      ctx.lineTo(data.x, data.y);
+      ctx.lineTo(data.x * canvas.width, data.y * canvas.height);
       ctx.stroke();
     });
 
     socket.on('clear', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.beginPath();
     });
   </script>
 </body>
