@@ -1,22 +1,44 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Экран</title>
   <style>
-    canvas { border: 2px solid black; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: #000;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
   </style>
 </head>
 <body>
-  <canvas id="screen" width="600" height="400"></canvas>
+  <canvas id="screen"></canvas>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
-    ctx.lineWidth = 2;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.lineWidth = 4;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#fff';
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     socket.on('draw', data => {
       ctx.lineTo(data.x, data.y);
