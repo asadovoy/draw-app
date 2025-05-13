@@ -6,12 +6,12 @@ const io = require('socket.io')(http);
 app.use(express.static('public'));
 
 io.on('connection', socket => {
-  socket.on('begin', data => {
-    socket.broadcast.emit('begin', data);
+  socket.on('stroke', data => {
+    io.emit('stroke', data);
   });
 
-  socket.on('draw', data => {
-    socket.broadcast.emit('draw', data);
+  socket.on('undo', data => {
+    io.emit('undo', data);
   });
 
   socket.on('clear', data => {

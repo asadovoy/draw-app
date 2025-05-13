@@ -8,8 +8,8 @@
     html, body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
       height: 100%;
+      overflow: hidden;
     }
     #controls {
       height: 60px;
@@ -18,6 +18,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 20px;
     }
     canvas {
       display: block;
@@ -25,66 +26,97 @@
       height: calc(100vh - 60px);
     }
     button {
-      margin-left: 20px;
       font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <div id="controls">Участник 1 <button onclick="clearCanvas()">Очистить</button></div>
+  <div id="controls">
+    Команда 1
+    <button onclick="clearAll()">Очистить 🗑️</button>
+    <button onclick="undo()">Отменить последнее ↩️</button>
+  </div>
   <canvas id="canvas"></canvas>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
     const userId = 1;
+    const socket = io();
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const bg = new Image();
     bg.src = 'background.jpg';
 
+    let drawing = false;
+    let strokes = [];
+    let currentStroke = [];
+
     function resizeCanvas() {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
-      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = userId === 1 ? "#00f" : "#0f0";
-      ctx.lineWidth = 4;
-      ctx.lineCap = "round";
+      drawAll();
     }
 
-    window.addEventListener('load', resizeCanvas);
-
-    let drawing = false;
+    function drawAll() {
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = userId === 1 ? "#ff0" : "#0f0";
+      for (const stroke of strokes) {
+        ctx.beginPath();
+        stroke.forEach((p, i) => {
+          const x = p.x * canvas.width;
+          const y = p.y * canvas.height;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+    }
 
     canvas.addEventListener('pointerdown', e => {
       drawing = true;
+      currentStroke = [getPoint(e)];
       ctx.beginPath();
       ctx.moveTo(e.offsetX, e.offsetY);
-      socket.emit('begin', {
-        x: e.offsetX / canvas.width,
-        y: e.offsetY / canvas.height,
-        userId
-      });
     });
 
     canvas.addEventListener('pointermove', e => {
       if (!drawing) return;
+      currentStroke.push(getPoint(e));
       ctx.lineTo(e.offsetX, e.offsetY);
       ctx.stroke();
-      socket.emit('draw', {
-        x: e.offsetX / canvas.width,
-        y: e.offsetY / canvas.height,
-        userId
-      });
     });
 
-    canvas.addEventListener('pointerup', () => drawing = false);
-    canvas.addEventListener('pointerleave', () => drawing = false);
+    canvas.addEventListener('pointerup', () => {
+      if (!drawing || currentStroke.length < 2) return;
+      drawing = false;
+      strokes.push(currentStroke);
+      if (strokes.length > 10) strokes.shift();
+      socket.emit('stroke', { stroke: currentStroke, userId });
+    });
 
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+    function getPoint(e) {
+      return {
+        x: e.offsetX / canvas.width,
+        y: e.offsetY / canvas.height
+      };
+    }
+
+    function undo() {
+      if (strokes.length > 0) {
+        strokes.pop();
+        drawAll();
+        socket.emit('undo', { userId });
+      }
+    }
+
+    function clearAll() {
+      strokes = [];
+      drawAll();
       socket.emit('clear', { userId });
     }
+
+    window.addEventListener('load', resizeCanvas);
   </script>
 </body>
 </html>

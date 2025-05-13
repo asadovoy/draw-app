@@ -25,67 +25,59 @@
     const socket = io();
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
-    const lastPoints = { 1: null, 2: null };
     const bg = new Image();
     bg.src = 'background.jpg';
+
+    const strokes = { 1: [], 2: [] };
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      drawAll();
     }
 
-    window.addEventListener('load', resizeCanvas);
-
-    socket.on('begin', data => {
-      const { x, y, userId } = data;
-      const adjustedY = userId === 1
-        ? y * (canvas.height / 2)
-        : y * (canvas.height / 2) + (canvas.height / 2);
-      lastPoints[userId] = { x: x * canvas.width, y: adjustedY };
-    });
-
-    socket.on('draw', data => {
-      const { x, y, userId } = data;
-      if (!lastPoints[userId]) return;
-
-      const newX = x * canvas.width;
-      const newY = userId === 1
-        ? y * (canvas.height / 2)
-        : y * (canvas.height / 2) + (canvas.height / 2);
-
-      ctx.strokeStyle = userId === 1 ? "#00f" : "#0f0";
+    function drawAll() {
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      ctx.lineCap = 'round';
       ctx.lineWidth = 4;
-      ctx.lineCap = "round";
 
-      ctx.beginPath();
-      ctx.moveTo(lastPoints[userId].x, lastPoints[userId].y);
-      ctx.lineTo(newX, newY);
-      ctx.stroke();
+      for (const userId of [1, 2]) {
+        ctx.strokeStyle = userId === 1 ? "#ff0" : "#0f0";
+        for (const stroke of strokes[userId]) {
+          ctx.beginPath();
+          stroke.forEach((p, i) => {
+            const x = p.x * canvas.width;
+            const y = userId === 1
+              ? p.y * (canvas.height / 2)
+              : p.y * (canvas.height / 2) + (canvas.height / 2);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        }
+      }
+    }
 
-      lastPoints[userId] = { x: newX, y: newY };
+    socket.on('stroke', data => {
+      const { userId, stroke } = data;
+      strokes[userId].push(stroke);
+      if (strokes[userId].length > 10) strokes[userId].shift();
+      drawAll();
     });
 
-      socket.on('clear', data => {
-        const userId = data.userId;
-        const halfHeight = canvas.height / 2;
+    socket.on('undo', data => {
+      const userId = data.userId;
+      strokes[userId].pop();
+      drawAll();
+    });
 
-        const sx = 0;
-        const sw = bg.width;
-        const sh = Math.floor(bg.height / 2); // округляем безопасно
+    socket.on('clear', data => {
+      const userId = data.userId;
+      strokes[userId] = [];
+      drawAll();
+    });
 
-        if (userId === 1) {
-          const sy = 0;
-          ctx.clearRect(0, 0, canvas.width, halfHeight);
-          ctx.drawImage(bg, sx, sy, sw, sh, 0, 0, canvas.width, halfHeight);
-        } else {
-          const sy = sh;
-          ctx.clearRect(0, halfHeight, canvas.width, halfHeight);
-          ctx.drawImage(bg, sx, sy, sw, sh, 0, halfHeight, canvas.width, halfHeight);
-        }
-
-        lastPoints[userId] = null;
-      });
+    window.addEventListener('load', resizeCanvas);
   </script>
 </body>
 </html>
