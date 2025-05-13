@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Рисование</title>
+  <style>
+    canvas { border: 2px solid black; touch-action: none; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="600" height="400"></canvas><br>
+  <button onclick="clearCanvas()">Очистить</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+
+    canvas.addEventListener('pointerdown', e => {
+      drawing = true;
+      draw(e);
+    });
+    canvas.addEventListener('pointerup', () => drawing = false);
+    canvas.addEventListener('pointermove', draw);
+
+    function draw(e) {
+      if (!drawing) return;
+      const x = e.offsetX;
+      const y = e.offsetY;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      socket.emit('draw', { x, y });
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      socket.emit('clear');
+    }
+  </script>
+</body>
+</html>

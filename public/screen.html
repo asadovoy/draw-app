@@ -1,0 +1,32 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Экран</title>
+  <style>
+    canvas { border: 2px solid black; }
+  </style>
+</head>
+<body>
+  <canvas id="screen" width="600" height="400"></canvas>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2;
+
+    socket.on('draw', data => {
+      ctx.lineTo(data.x, data.y);
+      ctx.stroke();
+    });
+
+    socket.on('clear', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+    });
+  </script>
+</body>
+</html>
