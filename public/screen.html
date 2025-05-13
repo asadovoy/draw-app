@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Экран</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     html, body {
       margin: 0;
@@ -22,37 +22,70 @@
 </head>
 <body>
   <canvas id="screen"></canvas>
-
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
 
+    let lastPoint = null;
+
+    const useImageBackground = true; // ← переключатель: true — фон картинка, false — заливка цветом
+    const backgroundImageUrl = "background.jpg";
+    const backgroundImage = new Image();
+    backgroundImage.src = backgroundImageUrl;
+
+    function drawBackground() {
+      if (useImageBackground && backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#333";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      drawBackground();
       ctx.lineWidth = 4;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#fff';
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    window.addEventListener('load', resizeCanvas);
+
+    socket.on("connect", () => {
+      console.log("✅ screen.html socket connected:", socket.id);
+    });
 
     socket.on('begin', data => {
-      ctx.beginPath();
-      ctx.moveTo(data.x * canvas.width, data.y * canvas.height);
+      const x = data.x * canvas.width;
+      const y = data.y * canvas.height;
+      lastPoint = { x, y };
+      console.log("📥 BEGIN", data);
     });
 
     socket.on('draw', data => {
-      ctx.lineTo(data.x * canvas.width, data.y * canvas.height);
+      if (!lastPoint) return;
+
+      const x = data.x * canvas.width;
+      const y = data.y * canvas.height;
+
+      ctx.beginPath();
+      ctx.moveTo(lastPoint.x, lastPoint.y);
+      ctx.lineTo(x, y);
       ctx.stroke();
+
+      lastPoint = { x, y };
+      console.log("📥 DRAW", data);
     });
 
     socket.on('clear', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      lastPoint = null;
     });
   </script>
 </body>

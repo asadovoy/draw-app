@@ -1,23 +1,26 @@
-
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-app.use(express.static(__dirname + '/public'));
+app.use(express.static('public'));
 
-io.on('connection', (socket) => {
-  console.log('User connected');
+io.on('connection', socket => {
+  console.log('🟢 New connection:', socket.id);
 
-  socket.on('draw', (data) => {
+  socket.on('begin', data => {
+    socket.broadcast.emit('begin', data);
+  });
+
+  socket.on('draw', data => {
     socket.broadcast.emit('draw', data);
   });
 
   socket.on('clear', () => {
-    io.emit('clear');
+    socket.broadcast.emit('clear');
   });
 });
 
 http.listen(3000, () => {
-  console.log('Server started on http://localhost:3000');
+  console.log('🚀 Server running on http://localhost:3000');
 });

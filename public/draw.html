@@ -1,18 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Рисование</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       overflow: hidden;
-      touch-action: none;
-      background: #fff;
+      background: #333;
     }
     #controls {
       position: fixed;
@@ -20,10 +18,10 @@
       left: 0;
       right: 0;
       height: 60px;
-      background: #f0f0f0;
+      background: #222;
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       z-index: 10;
     }
     #canvas {
@@ -34,12 +32,8 @@
       height: calc(100vh - 60px);
     }
     button {
-      font-size: 18px;
-      padding: 8px 20px;
-      border: none;
-      border-radius: 10px;
-      background: #007bff;
-      color: #fff;
+      padding: 10px 20px;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -48,24 +42,42 @@
     <button onclick="clearCanvas()">Очистить</button>
   </div>
   <canvas id="canvas"></canvas>
-
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    let drawing = false;
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight - 60;
+    let drawing = false;
+    const useImageBackground = true; // <== здесь переключаем фон: true — картинка, false — заливка цветом
+    const backgroundImageUrl = "background.jpg";
+    const backgroundImage = new Image();
+    backgroundImage.src = backgroundImageUrl;
+
+    function drawBackground() {
+      if (useImageBackground && backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#333";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      drawBackground();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+    }
+
+    window.addEventListener('load', resizeCanvas);
 
     canvas.addEventListener('pointerdown', e => {
       drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
       const x = e.offsetX / canvas.width;
       const y = e.offsetY / canvas.height;
       socket.emit('begin', { x, y });
@@ -73,6 +85,8 @@
 
     canvas.addEventListener('pointermove', e => {
       if (!drawing) return;
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
       const x = e.offsetX / canvas.width;
       const y = e.offsetY / canvas.height;
       socket.emit('draw', { x, y });
@@ -82,6 +96,8 @@
     canvas.addEventListener('pointerleave', () => drawing = false);
 
     function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
       socket.emit('clear');
     }
   </script>
