@@ -1,22 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Экран</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       height: 100%;
-      background: #000;
     }
     canvas {
       display: block;
       width: 100vw;
       height: 100vh;
-      touch-action: none;
     }
   </style>
 </head>
@@ -27,66 +25,67 @@
     const socket = io();
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
-
-    let lastPoint = null;
-
-    const useImageBackground = true; // ← переключатель: true — фон картинка, false — заливка цветом
-    const backgroundImageUrl = "background.jpg";
-    const backgroundImage = new Image();
-    backgroundImage.src = backgroundImageUrl;
-
-    function drawBackground() {
-      if (useImageBackground && backgroundImage.complete) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      } else {
-        ctx.fillStyle = "#333";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    }
+    const lastPoints = { 1: null, 2: null };
+    const bg = new Image();
+    bg.src = 'background.jpg';
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      drawBackground();
-      ctx.lineWidth = 4;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#fff';
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
     }
 
     window.addEventListener('load', resizeCanvas);
 
-    socket.on("connect", () => {
-      console.log("✅ screen.html socket connected:", socket.id);
-    });
-
     socket.on('begin', data => {
-      const x = data.x * canvas.width;
-      const y = data.y * canvas.height;
-      lastPoint = { x, y };
-      console.log("📥 BEGIN", data);
+      const { x, y, userId } = data;
+      const adjustedY = userId === 1
+        ? y * (canvas.height / 2)
+        : y * (canvas.height / 2) + (canvas.height / 2);
+      lastPoints[userId] = { x: x * canvas.width, y: adjustedY };
     });
 
     socket.on('draw', data => {
-      if (!lastPoint) return;
+      const { x, y, userId } = data;
+      if (!lastPoints[userId]) return;
 
-      const x = data.x * canvas.width;
-      const y = data.y * canvas.height;
+      const newX = x * canvas.width;
+      const newY = userId === 1
+        ? y * (canvas.height / 2)
+        : y * (canvas.height / 2) + (canvas.height / 2);
+
+      ctx.strokeStyle = userId === 1 ? "#00f" : "#0f0";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
 
       ctx.beginPath();
-      ctx.moveTo(lastPoint.x, lastPoint.y);
-      ctx.lineTo(x, y);
+      ctx.moveTo(lastPoints[userId].x, lastPoints[userId].y);
+      ctx.lineTo(newX, newY);
       ctx.stroke();
 
-      lastPoint = { x, y };
-      console.log("📥 DRAW", data);
+      lastPoints[userId] = { x: newX, y: newY };
     });
 
-    socket.on('clear', () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBackground();
-      lastPoint = null;
-    });
+      socket.on('clear', data => {
+        const userId = data.userId;
+        const halfHeight = canvas.height / 2;
+
+        const sx = 0;
+        const sw = bg.width;
+        const sh = Math.floor(bg.height / 2); // округляем безопасно
+
+        if (userId === 1) {
+          const sy = 0;
+          ctx.clearRect(0, 0, canvas.width, halfHeight);
+          ctx.drawImage(bg, sx, sy, sw, sh, 0, 0, canvas.width, halfHeight);
+        } else {
+          const sy = sh;
+          ctx.clearRect(0, halfHeight, canvas.width, halfHeight);
+          ctx.drawImage(bg, sx, sy, sw, sh, 0, halfHeight, canvas.width, halfHeight);
+        }
+
+        lastPoints[userId] = null;
+      });
   </script>
 </body>
 </html>

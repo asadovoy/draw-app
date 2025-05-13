@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Участник 2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+    #controls {
+      height: 60px;
+      background: #222;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: calc(100vh - 60px);
+    }
+    button {
+      margin-left: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">Участник 2 <button onclick="clearCanvas()">Очистить</button></div>
+  <canvas id="canvas"></canvas>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const userId = 2;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const bg = new Image();
+    bg.src = 'background.jpg';
+
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = userId === 1 ? "#00f" : "#0f0";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+    }
+
+    window.addEventListener('load', resizeCanvas);
+
+    let drawing = false;
+
+    canvas.addEventListener('pointerdown', e => {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+      socket.emit('begin', {
+        x: e.offsetX / canvas.width,
+        y: e.offsetY / canvas.height,
+        userId
+      });
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      socket.emit('draw', {
+        x: e.offsetX / canvas.width,
+        y: e.offsetY / canvas.height,
+        userId
+      });
+    });
+
+    canvas.addEventListener('pointerup', () => drawing = false);
+    canvas.addEventListener('pointerleave', () => drawing = false);
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      socket.emit('clear', { userId });
+    }
+  </script>
+</body>
+</html>
