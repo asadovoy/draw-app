@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Участник 1</title>
+  <title>Команда 1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
@@ -12,51 +11,52 @@
       height: 100%;
       overflow: hidden;
     }
-    #controls {
+
+    #topbar {
       position: absolute;
-      top: 10px;
-      right: 20px;
+      top: 20px;
+      left: 100px;
+      right: 100px;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 14px;
-      z-index: 100;
       pointer-events: none;
     }
-    .label {
-      font-size: 20px;
+
+    #teamName {
       font-family: 'Georgia', serif;
-      color: #3a2b1d;
-      text-shadow: 1px 1px 0 #fff, -1px -1px 0 #000;
-      opacity: 0.9;
+      font-size: 25px;
+      color: #3b2f1c;
+      letter-spacing: 1px;
       pointer-events: auto;
     }
-    button {
-      font-size: 16px;
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.1);
+
+    .top-btn {
+      font-size: 28px;
+      background: rgba(255, 255, 255, 0.0);
+      border: none;
       color: #fff;
       cursor: pointer;
-      backdrop-filter: blur(4px);
       pointer-events: auto;
+      margin-left: 10px;
     }
+
     canvas {
       display: block;
       width: 100vw;
       height: 100vh;
-      touch-action: none;
     }
   </style>
 </head>
 <body>
-  <div id="controls">
-    <div class="label">Команда 1</div>
-    <button onclick="clearAll()">🗑️</button>
-    <button onclick="undo()">↩️</button>
+  <div id="topbar">
+    <div id="teamName">Команда 1</div>
+    <div>
+      <button class="top-btn" onclick="clearAll()">🗑️</button>
+      <button class="top-btn" onclick="undo()">↩️</button>
+    </div>
   </div>
   <canvas id="canvas"></canvas>
-
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const userId = 1;
@@ -93,27 +93,17 @@
       }
     }
 
-    function getRelativePosition(e) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: (e.clientX - rect.left) / rect.width,
-        y: (e.clientY - rect.top) / rect.height
-      };
-    }
-
     canvas.addEventListener('pointerdown', e => {
       drawing = true;
-      currentStroke = [getRelativePosition(e)];
+      currentStroke = [getPoint(e)];
       ctx.beginPath();
-      const pos = getRelativePosition(e);
-      ctx.moveTo(pos.x * canvas.width, pos.y * canvas.height);
+      ctx.moveTo(e.offsetX, e.offsetY);
     });
 
     canvas.addEventListener('pointermove', e => {
       if (!drawing) return;
-      const pos = getRelativePosition(e);
-      currentStroke.push(pos);
-      ctx.lineTo(pos.x * canvas.width, pos.y * canvas.height);
+      currentStroke.push(getPoint(e));
+      ctx.lineTo(e.offsetX, e.offsetY);
       ctx.stroke();
     });
 
@@ -121,8 +111,16 @@
       if (!drawing || currentStroke.length < 2) return;
       drawing = false;
       strokes.push(currentStroke);
+      if (strokes.length > 100) strokes.shift();
       socket.emit('stroke', { stroke: currentStroke, userId });
     });
+
+    function getPoint(e) {
+      return {
+        x: e.offsetX / canvas.width,
+        y: e.offsetY / canvas.height
+      };
+    }
 
     function undo() {
       if (strokes.length > 0) {
