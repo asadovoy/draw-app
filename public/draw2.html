@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -11,10 +12,9 @@
       height: 100%;
       overflow: hidden;
     }
-
     #topbar {
       position: absolute;
-      top: 20px;
+      top: 32px;
       left: 100px;
       right: 100px;
       display: flex;
@@ -22,7 +22,6 @@
       align-items: center;
       pointer-events: none;
     }
-
     #teamName {
       font-family: 'Georgia', serif;
       font-size: 25px;
@@ -30,17 +29,15 @@
       letter-spacing: 1px;
       pointer-events: auto;
     }
-
     .top-btn {
-        font-size: 28px;
-        background: rgba(255, 255, 255, 0.0);
-        border: none;
-        color: #fff;
-        cursor: pointer;
-        pointer-events: auto;
-        margin-left: 10px;
-      }
-
+      font-size: 28px;
+      background: rgba(255, 255, 255, 0.0);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      pointer-events: auto;
+      margin-left: 10px;
+    }
     canvas {
       display: block;
       width: 100vw;
@@ -93,17 +90,27 @@
       }
     }
 
+    function getPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) / rect.width,
+        y: (e.clientY - rect.top) / rect.height
+      };
+    }
+
     canvas.addEventListener('pointerdown', e => {
       drawing = true;
       currentStroke = [getPoint(e)];
+      const p = getPoint(e);
       ctx.beginPath();
-      ctx.moveTo(e.offsetX, e.offsetY);
+      ctx.moveTo(p.x * canvas.width, p.y * canvas.height);
     });
 
     canvas.addEventListener('pointermove', e => {
       if (!drawing) return;
-      currentStroke.push(getPoint(e));
-      ctx.lineTo(e.offsetX, e.offsetY);
+      const p = getPoint(e);
+      currentStroke.push(p);
+      ctx.lineTo(p.x * canvas.width, p.y * canvas.height);
       ctx.stroke();
     });
 
@@ -114,13 +121,6 @@
       if (strokes.length > 100) strokes.shift();
       socket.emit('stroke', { stroke: currentStroke, userId });
     });
-
-    function getPoint(e) {
-      return {
-        x: e.offsetX / canvas.width,
-        y: e.offsetY / canvas.height
-      };
-    }
 
     function undo() {
       if (strokes.length > 0) {
