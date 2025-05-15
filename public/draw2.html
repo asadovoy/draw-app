@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,6 +25,7 @@
       display: block;
       width: 100vw;
       height: calc(100vh - 60px);
+      touch-action: none;
     }
     button {
       font-size: 16px;
@@ -32,11 +34,12 @@
 </head>
 <body>
   <div id="controls">
-      Команда 2
-      <button onclick="clearAll()">Очистить 🗑️</button>
-      <button onclick="undo()">Отменить последнее ↩️</button>
+    Команда 2
+    <button onclick="clearAll()">Очистить 🗑️</button>
+    <button onclick="undo()">Отменить последнее ↩️</button>
   </div>
   <canvas id="canvas"></canvas>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const userId = 2;
@@ -73,17 +76,27 @@
       }
     }
 
+    function getRelativePosition(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) / rect.width,
+        y: (e.clientY - rect.top) / rect.height
+      };
+    }
+
     canvas.addEventListener('pointerdown', e => {
       drawing = true;
-      currentStroke = [getPoint(e)];
+      currentStroke = [getRelativePosition(e)];
       ctx.beginPath();
-      ctx.moveTo(e.offsetX, e.offsetY);
+      const pos = getRelativePosition(e);
+      ctx.moveTo(pos.x * canvas.width, pos.y * canvas.height);
     });
 
     canvas.addEventListener('pointermove', e => {
       if (!drawing) return;
-      currentStroke.push(getPoint(e));
-      ctx.lineTo(e.offsetX, e.offsetY);
+      const pos = getRelativePosition(e);
+      currentStroke.push(pos);
+      ctx.lineTo(pos.x * canvas.width, pos.y * canvas.height);
       ctx.stroke();
     });
 
@@ -91,16 +104,8 @@
       if (!drawing || currentStroke.length < 2) return;
       drawing = false;
       strokes.push(currentStroke);
-      if (strokes.length > 10) strokes.shift();
       socket.emit('stroke', { stroke: currentStroke, userId });
     });
-
-    function getPoint(e) {
-      return {
-        x: e.offsetX / canvas.width,
-        y: e.offsetY / canvas.height
-      };
-    }
 
     function undo() {
       if (strokes.length > 0) {
