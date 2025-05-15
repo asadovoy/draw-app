@@ -61,7 +61,7 @@
     socket.on('stroke', data => {
       const { userId, stroke } = data;
       strokes[userId].push(stroke);
-      if (strokes[userId].length > 10) strokes[userId].shift();
+      if (strokes[userId].length > 20) strokes[userId].shift();
       drawAll();
     });
 
